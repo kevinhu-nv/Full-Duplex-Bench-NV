@@ -19,8 +19,7 @@ def round_to_quarter(number):
 def extract_key_from_audio_path(audio_path):
     """Extract key from audio path like 'pred_wavs/candor_105.wav' -> '105'"""
     import re
-    # Extract number from the filename
-    match = re.search(r'(\d+)\.wav$', audio_path)
+    match = re.search(r'(\d+)(?:\.wav)?$', audio_path)
     if match:
         return match.group(1)
     return None
@@ -156,9 +155,9 @@ def eval_smooth_turn_taking_text(data_dir, pred_text_file):
 
         print(f"Key: {key}")
         print(f"File: {os.path.basename(audio_input_file)}")
-        print(f"User offset time: {input_end_time:.2f}")
+        print(f"User offset time: {input_end_time:.3f}")
         if len(timestamps_and_text) > 0:
-            print(f"Agent onset time: {output_start_time:.2f}")
+            print(f"Agent onset time: {output_start_time:.3f}")
         print(f"the TOR is {TOR}")
         print(f"the latency is {latency}")
         print("---")
