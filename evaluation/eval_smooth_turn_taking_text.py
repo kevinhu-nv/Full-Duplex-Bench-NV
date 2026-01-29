@@ -21,7 +21,7 @@ def extract_key_from_audio_path(audio_path):
     import re
     match = re.search(r'(\d+)(?:\.wav)?$', audio_path)
     if match:
-        return match.group(1)
+        return str(int(match.group(1)))
     return None
 
 
@@ -46,21 +46,20 @@ def extract_timestamps_and_text(pred_text):
     return timestamps_and_text
 
 
-def count_words_after_first_timestamp(timestamps_and_text):
+def count_words_after_start_timestamp(timestamps_and_text):
     """
-    Count words in all text segments after the first timestamp.
+    Count words in all text segments after any start timestamp.
     """
-    timestamps_and_text = timestamps_and_text[0]
-    if len(timestamps_and_text) <= 1:
+    if len(timestamps_and_text) == 0:
         return 0
 
-    # Get all text after the first timestamp
-    text_after_first = ""
-    for text in timestamps_and_text[1:]:
-        text_after_first += text + " "
+    # Get all text after any timestamp
+    total_text = ""
+    for timestamp, text in timestamps_and_text:
+        total_text += text + " "
     
     # Count words (split by whitespace and filter empty strings)
-    words = [word for word in text_after_first.split() if word.strip()]
+    words = [word for word in total_text.split() if word.strip()]
     return len(words)
 
 
@@ -77,11 +76,16 @@ def eval_smooth_turn_taking_text(data_dir, pred_text_file):
     with open(pred_text_file, 'r') as f:
         for line in f:
             data = json.loads(line.strip())
-            if 'pred_text' in data and 'audio_path' in data:
-                # Extract key from audio_path
-                key = extract_key_from_audio_path(data['audio_path'])
+            if 'pred_text' in data and 'id' in data:
+                key = data['id']
                 if key is not None:
                     pred_texts_dict[key] = data['pred_text']
+                else:
+                    print(f"Warning: Could not extract key from audio_path: {data['audio_path']}")
+            elif 'speech_pred_transcribed' in data and 'audio_path' in data:
+                key = extract_key_from_audio_path(data['audio_path'])
+                if key is not None:
+                    pred_texts_dict[key] = data['speech_pred_transcribed']
                 else:
                     print(f"Warning: Could not extract key from audio_path: {data['audio_path']}")
             else:
@@ -138,9 +142,19 @@ def eval_smooth_turn_taking_text(data_dir, pred_text_file):
         if len(timestamps_and_text) == 0:
             TOR = 0
         else:
-            output_start_time = timestamps_and_text[0][0]  # Onset timestamp
-            # Count words after first timestamp
-            num_words_after_first = count_words_after_first_timestamp(timestamps_and_text)
+            # Find the first timestamp that has meaningful text after it
+            output_start_time = None
+            for timestamp, text in timestamps_and_text:
+                if text.strip():  # If there's actual text content
+                    output_start_time = timestamp
+                    break
+            
+            # If no timestamp with text found, use the first one
+            if output_start_time is None:
+                output_start_time = timestamps_and_text[0][0]
+            
+            # Count words after start timestamp
+            num_words_after_first = count_words_after_start_timestamp(timestamps_and_text)
             if num_words_after_first <= turn_num_words_threshold:
                 TOR = 0
             else:

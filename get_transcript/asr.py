@@ -12,7 +12,7 @@ MODEL_NAME = ""
 
 def get_time_aligned_transcription(data_path, task, is_stereo=False):
     # Collect all output.wav files under the root directory
-    audio_paths = sorted(glob(f"{data_path}/*.wav"))
+    audio_paths = sorted(glob(f"{data_path}/**/output.wav", recursive=True))
 
     # Load the pretrained NeMo ASR model and move to GPU
     asr_model = nemo_asr.models.ASRModel.from_pretrained(
@@ -23,6 +23,7 @@ def get_time_aligned_transcription(data_path, task, is_stereo=False):
         print(audio_path)
         # Read the audio file (waveform and sample rate)
         waveform, sr = sf.read(audio_path)
+        
         # If stereo and args.stereo is True, use channel 2 (index 1)
         if waveform.ndim > 1 and is_stereo:
             waveform = waveform[:, 1]
@@ -87,6 +88,7 @@ def get_time_aligned_transcription(data_path, task, is_stereo=False):
         os.makedirs(os.path.dirname(result_path), exist_ok=True)
         with open(result_path, "w") as f:
             json.dump(output_dict, f, indent=4)
+        print(f"Transcription saved to {result_path}")
 
 
 if __name__ == "__main__":

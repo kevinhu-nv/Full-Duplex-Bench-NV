@@ -1,9 +1,17 @@
 import argparse
 from openai import OpenAI
 
-# For OpenAI API api key
-# organization = "YOUR_ORG_ID"
-api_key = "YOUR_API_KEY"
+
+def read_api_key_from_file(file_path: str) -> str:
+    """Read API key from a file."""
+    try:
+        with open(file_path, "r") as f:
+            api_key = f.read().strip()
+        if not api_key:
+            raise ValueError(f"API key file {file_path} is empty.")
+        return api_key
+    except Exception as e:
+        raise ValueError(f"Failed to read API key from {file_path}: {e}")
 
 
 def main():
@@ -31,6 +39,20 @@ def main():
         help="Root directory containing data for evaluation.",
     )
 
+    parser.add_argument(
+        "--deployment_name",
+        type=str,
+        required=False,
+        help="Deployment name for the evaluation.",
+    )
+
+    parser.add_argument(
+        "--client_key_jsonl",
+        type=str,
+        required=False,
+        help="Path to API key file (required for user_interruption and behavior tasks).",
+    )
+
     args = parser.parse_args()
 
     if args.task == "backchannel":
@@ -48,8 +70,13 @@ def main():
     elif args.task == "user_interruption":
         from eval_user_interruption import eval_user_interruption
 
+        if not args.client_key_jsonl:
+            raise ValueError(
+                "CLIENT_KEY_JSONL must be provided for task 'user_interruption'."
+            )
+
+        api_key = read_api_key_from_file(args.client_key_jsonl)
         client = OpenAI(
-            # organization=organization,
             api_key=api_key,
         )
         client.models.list()
@@ -88,8 +115,13 @@ def main():
     elif args.task == "behavior":
         from eval_behavior import eval_behavior_all
 
+        if not args.client_key_jsonl:
+            raise ValueError(
+                "CLIENT_KEY_JSONL must be provided for task 'behavior'."
+            )
+
+        api_key = read_api_key_from_file(args.client_key_jsonl)
         client = OpenAI(
-            # organization=organization,
             api_key=api_key,
         )
         output = eval_behavior_all(

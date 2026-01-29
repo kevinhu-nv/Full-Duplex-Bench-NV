@@ -57,7 +57,21 @@ def build_key_to_pred_text_map(pred_text_file: str) -> Dict[str, str]:
             if not line.strip():
                 continue
             data = json.loads(line.strip())
-            key = data["id"]
+            # Try to get id first, if not available extract from audio_path
+            if "id" in data and data["id"] is not None:
+                key = data["id"]
+            elif "audio_path" in data:
+                # Extract number from audio_path like "pred_wavs/synthetic_user_interruption_synthetic_user_interruption_0103.wav"
+                audio_path = data["audio_path"]
+                # Extract the last sequence of digits before the file extension
+                match = re.search(r'_(\d+)\.wav$', audio_path)
+                if match:
+                    # Convert to int and back to string to remove leading zeros
+                    key = str(int(match.group(1)))
+                else:
+                    continue
+            else:
+                continue
             if key is None:
                 continue
             # Remove special tags like <SPECIAL_12> from pred_text
